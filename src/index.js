@@ -1645,14 +1645,14 @@ async function startProcess() {
 
                 if (commands[i].cmd === '3') {
                     // 3번 명령은 'Sensor2 became LOW.'를 기다림
-                    await waitForArduinoResponse('Sensor2 became LOW.');
+                    await waitForArduinoResponse('Sensor2 became LOW', { timeoutMs: 20000 });
                 } else if (commands[i].cmd === '4') {
                     // [수정] 'Sensor1 became LOW.' 신호를 받은 후, 5초 더 기다렸다가 다음으로 진행
-                    await waitForArduinoResponse('Sensor1 became LOW.');
+                    await waitForArduinoResponse('Sensor1 became LOW', { timeoutMs: 20000 });
                     //await new Promise((r) => setTimeout(r, 3000));
                 } else {
                     // 2번 명령(문 닫기) 처리
-                    await waitForArduinoResponse('Door closed successfully!');
+                    await waitForArduinoResponse('Door closed successfully', { timeoutMs: 20000 });
                 }
             }
             stopButton.disabled = true;
@@ -1794,8 +1794,10 @@ function waitForArduinoResponse(targetMessage, { timeoutMs = 10000 } = {}) {
                                 reject(new Error('Sensor state error (already)'));
                                 return;
                             }
-                            if (receivedData.includes(targetMessage)) {
+                            // 부분 문자열 매칭으로 변경 (더 유연하게)
+                            if (receivedData.toLowerCase().includes(targetMessage.toLowerCase())) {
                                 clearTimeout(timer);
+                                console.log('[waitForArduinoResponse] 응답 수신:', targetMessage);
                                 resolve();
                                 return;
                             }
@@ -1880,7 +1882,7 @@ function waitForCloseOrHand(targetMessage, { timeoutMs = 10000 } = {}) {
             new Promise((resolve, reject) => {
                 let receivedData = '';
                 const timer = setTimeout(() => {
-                    abortProcessNow('기기 오류: 모터 오작동(10초 내 완료 신호 없음)');
+                    abortProcessNow(`기기 오류: 모터 오작동(${Math.round(timeoutMs / 1000)}초 내 완료 신호 없음)`);
                     reject(new Error('Motor malfunction timeout'));
                 }, timeoutMs);
 
@@ -1915,8 +1917,10 @@ function waitForCloseOrHand(targetMessage, { timeoutMs = 10000 } = {}) {
                                 resolve({ status: 'hand' });
                                 return;
                             }
-                            if (receivedData.includes(targetMessage)) {
+                            // 부분 문자열 매칭으로 변경
+                            if (receivedData.toLowerCase().includes(targetMessage.toLowerCase())) {
                                 clearTimeout(timer);
+                                console.log('[waitForCloseOrHand] 응답 수신:', targetMessage);
                                 resolve({ status: 'ok' });
                                 return;
                             }
@@ -1941,28 +1945,28 @@ async function runCloseClassifyCollectSequence() {
     // 2. 닫힘
     renderCloseDoorOriginal('문이 닫힙니다. 손 조심하세요! ⚠️');
     await writeCmd('2');
-    const closeResult = await waitForCloseOrHand('Door closed successfully!');
+    const closeResult = await waitForCloseOrHand('Door closed successfully', { timeoutMs: 20000 });
 
     if (closeResult.status === 'hand') {
         // 다시 열기
         await writeCmd('1');
-        await waitForArduinoResponse('Motor stopped.');
+        await waitForArduinoResponse('Motor stopped', { timeoutMs: 20000 });
 
         // 재닫기 안내
         renderCloseDoorOriginal('문이 다시 닫힙니다. 손을 치워주세요. ⚠️');
         await writeCmd('2');
-        await waitForArduinoResponse('Door closed successfully!');
+        await waitForArduinoResponse('Door closed successfully', { timeoutMs: 20000 });
     }
 
     // 3. 판별중
     renderProcess('scan', '자원을 판별하는 중입니다...', 2);
     await writeCmd('3');
-    await waitForArduinoResponse('Motor task completed!');
+    await waitForArduinoResponse('Motor task completed', { timeoutMs: 20000 });
 
     // 4. 수집중
     renderProcess('collect', '자원을 수집하는 중입니다...', 3, { spin: true });
     await writeCmd('4');
-    await waitForArduinoResponse('24V Motor stopped.');
+    await waitForArduinoResponse('24V Motor stopped', { timeoutMs: 20000 });
 }
 
 // ========== Fa-duino 연결 ==========

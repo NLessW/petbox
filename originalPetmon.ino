@@ -57,8 +57,9 @@ bool errorState = false; // 오류 상태 플래그
 bool login = false;  // 로그인 상태 변수
 bool adminMode = false; // [ADD] 관리자 모드 여부
 
+
 void setup() {
-    Serial.begin(9600);
+    Serial1.begin(9600);
 
     // EEPROM 초기화 확인
     if (EEPROM.read(EEPROM_MAGIC) != EEPROM_MAGIC_VAL) {
@@ -94,11 +95,11 @@ void setup() {
     digitalWrite(led_Red, HIGH);
     digitalWrite(led_Blue, HIGH);
 
-    Serial.println("=== System Initialized ===");
-    Serial.println("*** LOGIN REQUIRED ***");
-    Serial.println("Enter '98' for ADMIN login (speed control enabled)");   // [ADD]
-    Serial.println("Enter '99' for USER login (no real-time speed control)"); // [ADD]
-    Serial.println("Enter 'h' for help");
+    Serial1.println("=== System Initialized ===");
+    Serial1.println("*** LOGIN REQUIRED ***");
+    Serial1.println("Enter '98' for ADMIN login (speed control enabled)");   // [ADD]
+    Serial1.println("Enter '99' for USER login (no real-time speed control)"); // [ADD]
+    Serial1.println("Enter 'h' for help");
 }
 
 void loadSpeedsFromEEPROM() {
@@ -115,44 +116,41 @@ void loadSpeedsFromEEPROM() {
 }
 
 void sendCurrentSpeeds() {
-    Serial.print("SPEEDS:DO=");
-    Serial.print(speed_DO);
-    Serial.print(";DC=");
-    Serial.print(speed_DC);
-    Serial.print(";D1=");
-    Serial.print(speed_D1);
-    Serial.print(";D2=");
-    Serial.println(speed_D2);
+    Serial1.print("SPEEDS:DO=");
+    Serial1.print(speed_DO);
+    Serial1.print(";DC=");
+    Serial1.print(speed_DC);
+    Serial1.print(";D1=");
+    Serial1.print(speed_D1);
+    Serial1.print(";D2=");
+    Serial1.println(speed_D2);
 }
 
 void loop() {
     
-    if(login){
-        Serial.println("Door will opened..");
-    }
 
-    if (Serial.available() > 0) {
-        String input = Serial.readStringUntil('\n');
+    if (Serial1.available() > 0) {
+        String input = Serial1.readStringUntil('\n');
         input.trim();
 
-        Serial.print("Input received: ");
-        Serial.println(input);
+        Serial1.print("Input received: ");
+        Serial1.println(input);
 
         // 로그인 명령 우선 처리
         if (input == "98") {
             login = true;
             adminMode = true;
-            Serial.println("*** ADMIN LOGIN SUCCESSFUL ***");
-            Serial.println("Real-time speed control ENABLED.");
+            Serial1.println("*** ADMIN LOGIN SUCCESSFUL ***");
+            Serial1.println("Real-time speed control ENABLED.");
             sendCurrentSpeeds();
-            Serial.println("Enter 'h' for available commands");
+            Serial1.println("Enter 'h' for available commands");
             return;
         } else if (input == "99") {
             login = true;
             adminMode = false;
-            Serial.println("*** USER LOGIN SUCCESSFUL ***");
-            Serial.println("Real-time speed control DISABLED.");
-            Serial.println("Enter 'h' for available commands");
+            Serial1.println("*** USER LOGIN SUCCESSFUL ***");
+            Serial1.println("Real-time speed control DISABLED.");
+            Serial1.println("Enter 'h' for available commands");
             return;
         }
 
@@ -166,7 +164,7 @@ void loop() {
         // 관리자 전용 기능
         if (input.startsWith("SPD:")) {
             if (!adminMode) {
-                Serial.println("*** ACCESS DENIED - Admin required (use 98) ***");
+                Serial1.println("*** ACCESS DENIED - Admin required (use 98) ***");
                 return;
             }
             parseAndSetSpeeds(input);
@@ -174,7 +172,7 @@ void loop() {
         }
         if (input == "Q" || input == "q") {
             if (!adminMode) {
-                Serial.println("*** ACCESS DENIED - Admin required (use 98) ***");
+                Serial1.println("*** ACCESS DENIED - Admin required (use 98) ***");
                 return;
             }
             sendCurrentSpeeds();
@@ -188,9 +186,9 @@ void loop() {
             } else if (input == "0") {
                 showSensorStatus();
             } else {
-                Serial.println("*** ACCESS DENIED ***");
-                Serial.println("Please login first by entering '98' (admin) or '99' (user)");
-                Serial.println("Available commands without login: 'h' (help), '0' (sensor status)");
+                Serial1.println("*** ACCESS DENIED ***");
+                Serial1.println("Please login first by entering '98' (admin) or '99' (user)");
+                Serial1.println("Available commands without login: 'h' (help), '0' (sensor status)");
             }
             return;
         }
@@ -207,10 +205,10 @@ void loop() {
                 case '0': showSensorStatus(); break;
                 case 'h':
                 case 'H': showHelp(); break;
-                default: Serial.println("Invalid command! Enter 'h' for help."); break;
+                default: Serial1.println("Invalid command! Enter 'h' for help."); break;
             }
         } else {
-            Serial.println("Invalid command! Enter 'h' for help.");
+            Serial1.println("Invalid command! Enter 'h' for help.");
         }
     }
 }
@@ -218,14 +216,14 @@ void loop() {
 // 공통 오류 트리거: 메시지 출력 후 모든 프로세스 강제 정지
 void triggerError(const char* msg) {
     if (errorState) return;
-    Serial.print("ERROR: ");
-    Serial.println(msg);
+    Serial1.print("ERROR: ");
+    Serial1.println(msg);
     // 모든 모터/출력 정지
     stopMotor();
     // 비상 상황: 문이 열린 상태면 안전하게 닫기 시도
     emergencyCloseDoorIfOpen();
     // 오류 상황에서는 인버터까지 완전 차단
-    Serial.println("All outputs OFF due to error.");
+    Serial1.println("All outputs OFF due to error.");
     errorState = true;
 }
 
@@ -234,18 +232,18 @@ void emergencyCloseDoorIfOpen() {
     // 닫힘 센서가 HIGH면 이미 닫힘 상태
     int closeState = digitalRead(closeDoor_Sensor);
     if (closeState == HIGH) {
-        Serial.println("Emergency: Door already closed.");
+        Serial1.println("Emergency: Door already closed.");
         return;
     }
 
-    Serial.println("Emergency: Attempting to close door...");
+    Serial1.println("Emergency: Attempting to close door...");
     unsigned long startMs = millis();
     const unsigned long timeoutMs = 8000; // 8초 내 시도
 
     while (digitalRead(closeDoor_Sensor) == LOW) {
         // 손 감지되면 즉시 중단 (문을 열어두어 안전 확보)
         if (digitalRead(handSensor) == HIGH) {
-            Serial.println("ERROR: Hand detected during emergency close; aborting close.");
+            Serial1.println("ERROR: Hand detected during emergency close; aborting close.");
             break;
         }
 
@@ -255,7 +253,7 @@ void emergencyCloseDoorIfOpen() {
         analogWrite(enb_Pin, 120);
 
         if (millis() - startMs > timeoutMs) {
-            Serial.println("ERROR: Emergency close timeout; door may remain open.");
+            Serial1.println("ERROR: Emergency close timeout; door may remain open.");
             break;
         }
         delay(50);
@@ -267,7 +265,7 @@ void emergencyCloseDoorIfOpen() {
     analogWrite(enb_Pin, 0);
 
     if (digitalRead(closeDoor_Sensor) == HIGH) {
-        Serial.println("Emergency: Door closed.");
+        Serial1.println("Emergency: Door closed.");
     }
 }
 
@@ -276,41 +274,41 @@ void logout() {
     stopMotor();
     login = false;
     adminMode = false; // [ADD]
-    Serial.println("*** LOGGED OUT ***");
-    Serial.println("All functions are now locked.");
-    Serial.println("Enter '98' (admin) or '99' (user) to login again");
+    Serial1.println("*** LOGGED OUT ***");
+    Serial1.println("All functions are now locked.");
+    Serial1.println("Enter '98' (admin) or '99' (user) to login again");
     
 
 }
 
 // 로그인 전 도움말
 void showLoginHelp() {
-    Serial.println("=== LOGIN REQUIRED ===");
-    Serial.println("98 - Admin login (real-time speed control)");
-    Serial.println("99 - User login (no real-time speed control)");
-    Serial.println("h  - Show this help");
-    Serial.println("0  - Show sensor status (allowed without login)");
-    Serial.println("======================");
+    Serial1.println("=== LOGIN REQUIRED ===");
+    Serial1.println("98 - Admin login (real-time speed control)");
+    Serial1.println("99 - User login (no real-time speed control)");
+    Serial1.println("h  - Show this help");
+    Serial1.println("0  - Show sensor status (allowed without login)");
+    Serial1.println("======================");
 }
 
 // 로그인 후 도움말
 void showHelp() {
-    Serial.println("=== Available Commands (Logged In) ===");
-    Serial.println("1  - Open Door");
-    Serial.println("2  - Close Door");
-    Serial.println("3  - Run Sensor1 Motor (24V)");
-    Serial.println("4  - Run Sensor2 Motor (24V)");
-    Serial.println("5  - Run Full Auto Sequence");
-    Serial.println("0  - Show Sensor Status");
-    Serial.println("X  - Stop Motor (Emergency)");
-    Serial.println("L  - Logout");
-    Serial.println("Admin-only: Q (query speeds), SPD:DO=n;DC=n;D1=n;D2=n (set speeds)");
-    Serial.println("=====================================");
+    Serial1.println("=== Available Commands (Logged In) ===");
+    Serial1.println("1  - Open Door");
+    Serial1.println("2  - Close Door");
+    Serial1.println("3  - Run Sensor1 Motor (24V)");
+    Serial1.println("4  - Run Sensor2 Motor (24V)");
+    Serial1.println("5  - Run Full Auto Sequence");
+    Serial1.println("0  - Show Sensor Status");
+    Serial1.println("X  - Stop Motor (Emergency)");
+    Serial1.println("L  - Logout");
+    Serial1.println("Admin-only: Q (query speeds), SPD:DO=n;DC=n;D1=n;D2=n (set speeds)");
+    Serial1.println("=====================================");
 }
 
 
 void showSensorStatus() {
-    Serial.println("=== Current Sensor Status ===");
+    Serial1.println("=== Current Sensor Status ===");
     
     int seesaw1 = digitalRead(seesaw_Sensor1);
     int seesaw2 = digitalRead(seesaw_Sensor2);
@@ -318,85 +316,85 @@ void showSensorStatus() {
     int doorClose = digitalRead(closeDoor_Sensor);
     int hand = digitalRead(handSensor);
     
-    Serial.print("Seesaw Sensor1 (Pin 27): ");
-    Serial.println(seesaw1 == HIGH ? "HIGH (Not Detected)" : "LOW (Detected)");
+    Serial1.print("Seesaw Sensor1 (Pin 27): ");
+    Serial1.println(seesaw1 == HIGH ? "HIGH (Not Detected)" : "LOW (Detected)");
     
-    Serial.print("Seesaw Sensor2 (Pin 28): ");
-    Serial.println(seesaw2 == HIGH ? "HIGH (Not Detected)" : "LOW (Detected)");
+    Serial1.print("Seesaw Sensor2 (Pin 28): ");
+    Serial1.println(seesaw2 == HIGH ? "HIGH (Not Detected)" : "LOW (Detected)");
     
-    Serial.print("Door Open Sensor (Pin 36): ");
-    Serial.println(doorOpen == HIGH ? "HIGH (Door Open)" : "LOW (Door Closed)");
+    Serial1.print("Door Open Sensor (Pin 36): ");
+    Serial1.println(doorOpen == HIGH ? "HIGH (Door Open)" : "LOW (Door Closed)");
     
-    Serial.print("Door Close Sensor (Pin 37): ");
-    Serial.println(doorClose == HIGH ? "HIGH (Door Closed)" : "LOW (Door Open)");
+    Serial1.print("Door Close Sensor (Pin 37): ");
+    Serial1.println(doorClose == HIGH ? "HIGH (Door Closed)" : "LOW (Door Open)");
     
-    Serial.print("Hand Sensor (Pin 22): ");
-    Serial.println(hand == HIGH ? "HIGH (Hand Detected)" : "LOW (No Hand)");
+    Serial1.print("Hand Sensor (Pin 22): ");
+    Serial1.println(hand == HIGH ? "HIGH (Hand Detected)" : "LOW (No Hand)");
     
-    Serial.print("Login Status: ");
-    Serial.println(login ? "LOGGED IN" : "NOT LOGGED IN");
+    Serial1.print("Login Status: ");
+    Serial1.println(login ? "LOGGED IN" : "NOT LOGGED IN");
     
-    Serial.println("=============================");
+    Serial1.println("=============================");
 }
 
 void runAutoSequence() {
-    Serial.println("Starting full automatic sequence...");
+    Serial1.println("Starting full automatic sequence...");
     
     // 단계 1: 문 열기 (knife 작동)
-    Serial.println("=== Auto Step 1: Opening door ===");
+    Serial1.println("=== Auto Step 1: Opening door ===");
     executeOpenDoor();
-    if (errorState) { Serial.println("Auto aborted due to error."); return; }
+    if (errorState) { Serial1.println("Auto aborted due to error."); return; }
     
     // 3초 대기
-    Serial.println("Waiting 3 seconds...");
+    Serial1.println("Waiting 3 seconds...");
     delay(3000);
     
     // 단계 2: 문 닫기
-    Serial.println("=== Auto Step 2: Closing door ===");
+    Serial1.println("=== Auto Step 2: Closing door ===");
     executeCloseDoor();
-    if (errorState) { Serial.println("Auto aborted due to error."); return; }
+    if (errorState) { Serial1.println("Auto aborted due to error."); return; }
     
     // 5초 대기
-    Serial.println("Waiting 5 seconds...");
+    Serial1.println("Waiting 5 seconds...");
     delay(2000);
     
     // 단계 3: 센서1 기반 모터
-    Serial.println("=== Auto Step 3: Running motor based on Sensor1 ===");
+    Serial1.println("=== Auto Step 3: Running motor based on Sensor1 ===");
     executeSensor1Motor();
-    if (errorState) { Serial.println("Auto aborted due to error."); return; }
+    if (errorState) { Serial1.println("Auto aborted due to error."); return; }
     
-    Serial.println("Waiting 3 seconds...");
+    Serial1.println("Waiting 3 seconds...");
     delay(3000);
     
     //단계 4: 센서2 기반 모터
-    Serial.println("=== Auto Step 4: Running motor based on Sensor2 ===");
+    Serial1.println("=== Auto Step 4: Running motor based on Sensor2 ===");
     executeSensor2Motor();
-    if (errorState) { Serial.println("Auto aborted due to error."); return; }
+    if (errorState) { Serial1.println("Auto aborted due to error."); return; }
     
     // 모든 단계 완료 후 10초 대기 후 종료
-    Serial.println("=== All steps completed ===");
-    Serial.println("Waiting 10 seconds before shutdown...");
+    Serial1.println("=== All steps completed ===");
+    Serial1.println("Waiting 10 seconds before shutdown...");
     delay(10000);
     
     // 시스템 종료
-    Serial.println("=== System Shutdown ===");
-    Serial.println("All processes completed. System is now idle.");
-    Serial.println("To restart, reset the Arduino or enter new commands.");
+    Serial1.println("=== System Shutdown ===");
+    Serial1.println("All processes completed. System is now idle.");
+    Serial1.println("To restart, reset the Arduino or enter new commands.");
     
-    Serial.println("=== Full automatic sequence completed ===");
+    Serial1.println("=== Full automatic sequence completed ===");
 }
 
 void executeOpenDoor() {
     door_open_state = digitalRead(openDoor_Sensor);
-    Serial.print("Current door open sensor state: ");
-    Serial.println(door_open_state);
+    Serial1.print("Current door open sensor state: ");
+    Serial1.println(door_open_state);
     
     if (door_open_state == LOW){
-        Serial.println("Door is closed. Opening door...");
+        Serial1.println("Door is closed. Opening door...");
         unsigned long startMs = millis();
         while(door_open_state == LOW) {
             // 시리얼 명령 처리 (속도 변경)
-            checkSerialForSpeedUpdate();
+            checkSerial1ForSpeedUpdate();
             
             digitalWrite(in3_Pin, LOW);
             digitalWrite(in4_Pin, HIGH);
@@ -409,34 +407,34 @@ void executeOpenDoor() {
             }
         }
         if (!errorState) {
-            Serial.println("Door opened successfully!");
+            Serial1.println("Door opened successfully!");
         }
     } else {
-        Serial.println("Door is already open. No action needed.");
+        Serial1.println("Door is already open. No action needed.");
     }
 
     digitalWrite(in3_Pin, LOW);
     digitalWrite(in4_Pin, LOW);
     analogWrite(enb_Pin, 0);
-    Serial.println("12V Motor stopped.");
+    Serial1.println("12V Motor stopped.");
     delay(3000);
 }
 
 void executeCloseDoor() {
     door_close_state = digitalRead(closeDoor_Sensor);
     
-    Serial.print("Current door close sensor state: ");
-    Serial.println(door_close_state);
+    Serial1.print("Current door close sensor state: ");
+    Serial1.println(door_close_state);
     
     if (door_close_state == LOW){
-        Serial.println("Door is open. Closing door...");
+        Serial1.println("Door is open. Closing door...");
         unsigned long startMs = millis();
         while(door_close_state == LOW) {
             // 시리얼 명령 처리 (속도 변경)
-            checkSerialForSpeedUpdate();
+            checkSerial1ForSpeedUpdate();
             
             if(digitalRead(handSensor) == HIGH) {
-                Serial.println("*** HAND DETECTED! Stopping door and reopening ***");
+                Serial1.println("*** HAND DETECTED! Stopping door and reopening ***");
                 
                 digitalWrite(in3_Pin, LOW);
                 digitalWrite(in4_Pin, LOW);
@@ -445,13 +443,13 @@ void executeCloseDoor() {
                 executeOpenDoor();
                 delay(3000);
                 
-                Serial.println("Waiting for hand to be removed...");
+                Serial1.println("Waiting for hand to be removed...");
                 while(digitalRead(handSensor) == HIGH) {
-                    Serial.println("Hand still detected. Please remove hand.");
+                    Serial1.println("Hand still detected. Please remove hand.");
                     delay(500);
                 }
                 
-                Serial.println("Hand removed. Resuming door closing...");
+                Serial1.println("Hand removed. Resuming door closing...");
                 delay(1000);
                 startMs = millis();
             }
@@ -467,24 +465,24 @@ void executeCloseDoor() {
             }
         }
         if (!errorState) {
-            Serial.println("Door closed successfully!");
+            Serial1.println("Door closed successfully!");
         }
     } else {
-        Serial.println("Door is already closed. No action needed.");
+        Serial1.println("Door is already closed. No action needed.");
     }
 
     digitalWrite(in3_Pin, LOW);
     digitalWrite(in4_Pin, LOW);
     analogWrite(enb_Pin, 0);
-    Serial.println("Door stopped.");
+    Serial1.println("Door stopped.");
 }
 
 void executeSensor1Motor() {
 
     seesaw_State2 = digitalRead(seesaw_Sensor2);
     
-    Serial.print("Current Sensor2 state (used in Motor1): ");
-    Serial.println(seesaw_State2);
+    Serial1.print("Current Sensor2 state (used in Motor1): ");
+    Serial1.println(seesaw_State2);
     
     for(int i = 0; i < 5; i++){
         digitalWrite(led_Blue, LOW);
@@ -494,12 +492,12 @@ void executeSensor1Motor() {
     }
     
     if (seesaw_State2 == HIGH) {
-        Serial.println("Sensor2 is HIGH. Starting 24V motor (direction 1)...");
+        Serial1.println("Sensor2 is HIGH. Starting 24V motor (direction 1)...");
 
         unsigned long startMs = millis();
         while (seesaw_State2 == HIGH) {
             // 시리얼 명령 처리 (속도 변경)
-            checkSerialForSpeedUpdate();
+            checkSerial1ForSpeedUpdate();
             
             digitalWrite(in1_Pin, LOW);
             digitalWrite(in2_Pin, HIGH);
@@ -515,11 +513,11 @@ void executeSensor1Motor() {
         }
         
         if (!errorState) {
-            Serial.println("Sensor2 became LOW. Motor task completed!");
-            Serial.println("24V Motor stopped.");
+            Serial1.println("Sensor2 became LOW. Motor task completed!");
+            Serial1.println("24V Motor stopped.");
         }
     } else {
-        Serial.println("Sensor2 is already LOW. No action needed.");
+        Serial1.println("Sensor2 is already LOW. No action needed.");
     }
 
     digitalWrite(in1_Pin, LOW);
@@ -531,16 +529,16 @@ void executeSensor2Motor() {
     delay(2000);
     seesaw_State1 = digitalRead(seesaw_Sensor1);
     
-    Serial.print("Current Sensor1 state (used in Motor2): ");
-    Serial.println(seesaw_State1);
+    Serial1.print("Current Sensor1 state (used in Motor2): ");
+    Serial1.println(seesaw_State1);
 
     if (seesaw_State1 == HIGH) {
-        Serial.println("Sensor1 is HIGH. Starting 24V motor (direction 2)...");
+        Serial1.println("Sensor1 is HIGH. Starting 24V motor (direction 2)...");
 
         unsigned long startMs = millis();
         while (seesaw_State1 == HIGH) {
             // 시리얼 명령 처리 (속도 변경)
-            checkSerialForSpeedUpdate();
+            checkSerial1ForSpeedUpdate();
             
             digitalWrite(in1_Pin, HIGH);
             digitalWrite(in2_Pin, LOW);
@@ -554,10 +552,10 @@ void executeSensor2Motor() {
             }
         }
         if (!errorState) {
-            Serial.println("Sensor1 became LOW. Motor task completed!");
+            Serial1.println("Sensor1 became LOW. Motor task completed!");
         }
     } else {
-        Serial.println("Sensor1 is already LOW. No action needed.");
+        Serial1.println("Sensor1 is already LOW. No action needed.");
     }
 
     digitalWrite(in1_Pin, LOW);
@@ -566,34 +564,34 @@ void executeSensor2Motor() {
     delay(5000);
 
     if (!errorState) {
-        Serial.println("24V Motor stopped.");
+        Serial1.println("24V Motor stopped.");
     }
 }
 
 // 새로운 함수: while 루프 안에서 속도 업데이트 확인
-void checkSerialForSpeedUpdate() {
-    while (Serial.available() > 0) {
-        int c = Serial.peek();
-        if (c == '\n' || c == '\r') { Serial.read(); continue; }
+void checkSerial1ForSpeedUpdate() {
+    while (Serial1.available() > 0) {
+        int c = Serial1.peek();
+        if (c == '\n' || c == '\r') { Serial1.read(); continue; }
 
         // 즉시 정지/로그아웃 (버퍼 소비 후 처리)
-        if (c == 'x' || c == 'X') { Serial.read(); stopMotor(); return; }
-        if (c == 'l' || c == 'L') { Serial.read(); logout();   return; }
+        if (c == 'x' || c == 'X') { Serial1.read(); stopMotor(); return; }
+        if (c == 'l' || c == 'L') { Serial1.read(); logout();   return; }
 
         // 관리자만 속도 관련 허용
         if (c == 'S') {
-            String line = Serial.readStringUntil('\n');
+            String line = Serial1.readStringUntil('\n');
             line.trim();
             if (line.startsWith("SPD:")) {
                 if (login && adminMode) parseAndSetSpeeds(line);
-                else Serial.println("*** ACCESS DENIED - Admin required for SPD ***");
+                else Serial1.println("*** ACCESS DENIED - Admin required for SPD ***");
             }
             continue;
         }
         if (c == 'Q' || c == 'q') {
-            Serial.read();
+            Serial1.read();
             if (login && adminMode) sendCurrentSpeeds();
-            else Serial.println("*** ACCESS DENIED - Admin required for Q ***");
+            else Serial1.println("*** ACCESS DENIED - Admin required for Q ***");
             continue;
         }
 
@@ -659,16 +657,16 @@ void parseAndSetSpeeds(String cmd) {
         EEPROM.update(EEPROM_ADDR_D1, speed_D1);
         EEPROM.update(EEPROM_ADDR_D2, speed_D2);
         
-        Serial.print("Speed updated and saved: DO=");
-        Serial.print(speed_DO);
-        Serial.print(" DC=");
-        Serial.print(speed_DC);
-        Serial.print(" D1=");
-        Serial.print(speed_D1);
-        Serial.print(" D2=");
-        Serial.println(speed_D2);
+        Serial1.print("Speed updated and saved: DO=");
+        Serial1.print(speed_DO);
+        Serial1.print(" DC=");
+        Serial1.print(speed_DC);
+        Serial1.print(" D1=");
+        Serial1.print(speed_D1);
+        Serial1.print(" D2=");
+        Serial1.println(speed_D2);
     } else {
-        Serial.println("No speed change detected");
+        Serial1.println("No speed change detected");
     }
 }
 void stopMotor(){
@@ -680,9 +678,9 @@ void stopMotor(){
     digitalWrite(in1_Pin, LOW);
     digitalWrite(in2_Pin, LOW);
     analogWrite(ena_Pin, 0);
-    Serial.println("Motor stopped.");
+    Serial1.println("Motor stopped.");
     login = false;  // 로그인 상태를 false로 변경
-    Serial.println("Knife deactivated.");
-    Serial.println("*** LOGGED OUT BY EMERGENCY STOP ***");
-    Serial.println("Enter '99' to login again");
+    Serial1.println("Knife deactivated.");
+    Serial1.println("*** LOGGED OUT BY EMERGENCY STOP ***");
+    Serial1.println("Enter '99' to login again");
 }
