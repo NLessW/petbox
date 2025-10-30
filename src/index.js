@@ -1443,7 +1443,7 @@ async function beginGracefulAutoExit() {
             await writeCmd('2');
             // [ADD] 최대 7초까지만 문닫힘 완료 신호 대기 (실패해도 넘어감)
             try {
-                await waitForArduinoResponse('Door closed successfully!', { timeoutMs: 7000 });
+                await waitForArduinoResponse('Door closed', { timeoutMs: 7000 });
             } catch {}
         } catch (e) {
             if (!handleDeviceLost(e)) console.error('무입력 종료: 문 닫기(2) 전송 실패:', e);
@@ -1529,8 +1529,8 @@ async function handleExitButton() {
                     await waitForArduinoResponse('Sensor1 became LOW.');
                     //await new Promise((r) => setTimeout(r, 3000));
                 } else {
-                    // 2번 명령(문 닫기) 처리
-                    await waitForArduinoResponse('Door closed successfully!');
+                    // 2번 명령(문 닫기) 처리 - "Door closed" 핵심 키워드만 매칭
+                    await waitForArduinoResponse('Door closed');
                 }
             }
 
@@ -1651,8 +1651,8 @@ async function startProcess() {
                     await waitForArduinoResponse('Sensor1 became LOW', { timeoutMs: 20000 });
                     //await new Promise((r) => setTimeout(r, 3000));
                 } else {
-                    // 2번 명령(문 닫기) 처리
-                    await waitForArduinoResponse('Door closed successfully', { timeoutMs: 20000 });
+                    // 2번 명령(문 닫기) 처리 - "Door closed" 핵심 키워드만 매칭
+                    await waitForArduinoResponse('Door closed', { timeoutMs: 20000 });
                 }
             }
             stopButton.disabled = true;
@@ -1774,6 +1774,9 @@ function waitForArduinoResponse(targetMessage, { timeoutMs = 10000 } = {}) {
                         }
                         if (value) {
                             receivedData += value;
+
+                            // [ADD] 수신 데이터 디버그 로그
+                            console.log('[waitForArduinoResponse] 수신:', value.substring(0, 100));
 
                             // HAND DETECTED 수신 시 타임아웃 리셋 + 30초로 연장
                             if (receivedData.toLowerCase().includes('hand detected')) {
@@ -1897,6 +1900,9 @@ function waitForCloseOrHand(targetMessage, { timeoutMs = 10000 } = {}) {
                         if (value) {
                             receivedData += value;
 
+                            // [ADD] 수신 데이터 디버그 로그
+                            console.log('[waitForCloseOrHand] 수신:', value.substring(0, 100));
+
                             if (receivedData.includes('ERROR:')) {
                                 clearTimeout(timer);
                                 const line =
@@ -1945,7 +1951,7 @@ async function runCloseClassifyCollectSequence() {
     // 2. 닫힘
     renderCloseDoorOriginal('문이 닫힙니다. 손 조심하세요! ⚠️');
     await writeCmd('2');
-    const closeResult = await waitForCloseOrHand('Door closed successfully', { timeoutMs: 20000 });
+    const closeResult = await waitForCloseOrHand('Door closed', { timeoutMs: 20000 });
 
     if (closeResult.status === 'hand') {
         // 다시 열기
@@ -1955,7 +1961,7 @@ async function runCloseClassifyCollectSequence() {
         // 재닫기 안내
         renderCloseDoorOriginal('문이 다시 닫힙니다. 손을 치워주세요. ⚠️');
         await writeCmd('2');
-        await waitForArduinoResponse('Door closed successfully', { timeoutMs: 20000 });
+        await waitForArduinoResponse('Door closed', { timeoutMs: 20000 });
     }
 
     // 3. 판별중
@@ -2270,8 +2276,8 @@ stopButton.addEventListener('click', async () => {
                     await waitForArduinoResponse('Sensor1 became LOW.');
                     //await new Promise((r) => setTimeout(r, 3000));
                 } else {
-                    // 2번 명령(문 닫기) 처리
-                    await waitForArduinoResponse('Door closed successfully!');
+                    // 2번 명령(문 닫기) 처리 - "Door closed" 핵심 키워드만 매칭
+                    await waitForArduinoResponse('Door closed');
                 }
             }
             showScreen('main-screen');
