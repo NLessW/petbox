@@ -1772,6 +1772,8 @@ function waitForArduinoResponse(targetMessage, { timeoutMs = 10000 } = {}) {
                 // 초기 타임아웃 무장
                 scheduleTimeout(timeoutMs, timeoutMs);
 
+                let loggedLines = 0; // 이미 출력한 줄 수 추적
+
                 const loop = async () => {
                     try {
                         const { value, done } = await reader.read();
@@ -1783,8 +1785,14 @@ function waitForArduinoResponse(targetMessage, { timeoutMs = 10000 } = {}) {
                         if (value) {
                             receivedData += value;
 
-                            // [ADD] 수신 데이터 디버그 로그
-                            console.log('[waitForArduinoResponse] 수신:', value.substring(0, 100));
+                            // [ADD] 수신 데이터 디버그 로그 (줄 단위로 출력, 중복 방지)
+                            const lines = receivedData.split(/\r?\n/);
+                            for (let i = loggedLines; i < lines.length - 1; i++) {
+                                if (lines[i].trim()) {
+                                    console.log('[waitForArduinoResponse] 수신 완료:', lines[i]);
+                                }
+                            }
+                            loggedLines = lines.length - 1;
 
                             // HAND DETECTED 수신 시 타임아웃 리셋 + 30초로 연장
                             if (receivedData.toLowerCase().includes('hand detected')) {
@@ -1835,6 +1843,7 @@ function waitForAnyArduinoResponse(targetMessages, { timeoutMs = 30000 } = {}) {
         () =>
             new Promise((resolve, reject) => {
                 let receivedData = '';
+                let loggedLines = 0; // 이미 출력한 줄 수 추적
                 const timer = setTimeout(() => {
                     console.warn('waitForAnyArduinoResponse timeout', { targetMessages });
                     reject(new Error('Timeout while waiting for Arduino response'));
@@ -1851,8 +1860,14 @@ function waitForAnyArduinoResponse(targetMessages, { timeoutMs = 30000 } = {}) {
                         if (value) {
                             receivedData += value;
 
-                            // [ADD] 수신 데이터 디버그 로그
-                            console.log('[waitForAnyArduinoResponse] 수신:', value.substring(0, 100));
+                            // [ADD] 수신 데이터 디버그 로그 (줄 단위로 출력, 중복 방지)
+                            const lines = receivedData.split(/\r?\n/);
+                            for (let i = loggedLines; i < lines.length - 1; i++) {
+                                if (lines[i].trim()) {
+                                    console.log('[waitForAnyArduinoResponse] 수신 완료:', lines[i]);
+                                }
+                            }
+                            loggedLines = lines.length - 1;
 
                             if (receivedData.includes('ERROR:')) {
                                 clearTimeout(timer);
@@ -1896,6 +1911,7 @@ function waitForCloseOrHand(targetMessage, { timeoutMs = 10000 } = {}) {
         () =>
             new Promise((resolve, reject) => {
                 let receivedData = '';
+                let loggedLines = 0; // 이미 출력한 줄 수 추적
                 const timer = setTimeout(() => {
                     abortProcessNow(`기기 오류: 모터 오작동(${Math.round(timeoutMs / 1000)}초 내 완료 신호 없음)`);
                     reject(new Error('Motor malfunction timeout'));
@@ -1912,8 +1928,14 @@ function waitForCloseOrHand(targetMessage, { timeoutMs = 10000 } = {}) {
                         if (value) {
                             receivedData += value;
 
-                            // [ADD] 수신 데이터 디버그 로그
-                            console.log('[waitForCloseOrHand] 수신:', value.substring(0, 100));
+                            // [ADD] 수신 데이터 디버그 로그 (줄 단위로 출력, 중복 방지)
+                            const lines = receivedData.split(/\r?\n/);
+                            for (let i = loggedLines; i < lines.length - 1; i++) {
+                                if (lines[i].trim()) {
+                                    console.log('[waitForCloseOrHand] 수신 완료:', lines[i]);
+                                }
+                            }
+                            loggedLines = lines.length - 1;
 
                             if (receivedData.includes('ERROR:')) {
                                 clearTimeout(timer);
