@@ -514,7 +514,6 @@ void executeSensor1Motor() {
         
         if (!errorState) {
             Serial1.println("Sensor2 became LOW. Motor task completed!");
-            Serial1.println("24V Motor stopped.");
         }
     } else {
         Serial1.println("Sensor2 is already LOW. No action needed.");
@@ -523,6 +522,7 @@ void executeSensor1Motor() {
     digitalWrite(in1_Pin, LOW);
     digitalWrite(in2_Pin, LOW);
     analogWrite(ena_Pin, 0);
+    Serial1.println("24V Motor stopped.");
 }
 
 void executeSensor2Motor() {
@@ -561,11 +561,8 @@ void executeSensor2Motor() {
     digitalWrite(in1_Pin, LOW);
     digitalWrite(in2_Pin, LOW);
     analogWrite(ena_Pin, 0);
+    Serial1.println("24V Motor stopped.");
     delay(5000);
-
-    if (!errorState) {
-        Serial1.println("24V Motor stopped.");
-    }
 }
 
 // 새로운 함수: while 루프 안에서 속도 업데이트 확인

@@ -244,6 +244,7 @@ function showConfirmModal({ title = '확인', lines = [], yesText = '예', noTex
 
 // 장치 분리(케이블 탈거 등) 발생 시 공통 처리
 async function teardownSerial() {
+    console.log('[시리얼] 연결 해제 시작');
     try {
         if (reader) {
             try {
@@ -268,6 +269,7 @@ async function teardownSerial() {
         reader = undefined;
         writer = undefined;
         isConnected = false;
+        console.log('[시리얼] 연결 해제 완료');
     }
 }
 
@@ -286,6 +288,7 @@ function handleDeviceLost(err) {
 
 // 아두이노는 줄 단위 명령 처리 -> 항상 \n 포함
 function writeCmd(cmd) {
+    console.log('[writeCmd] 전송:', cmd);
     if (__testMode) {
         // 시뮬레이터 writer에 위임
         return writer && writer.write ? writer.write(cmd + '\n') : Promise.resolve();
@@ -703,6 +706,7 @@ async function chooseSerialPort() {
         if (!port.readable && !port.writable) {
             await port.open({ baudRate: 9600 });
         }
+        console.log('[시리얼] 포트 열림, baudRate: 9600');
         const decoder = new TextDecoderStream();
         port.readable.pipeTo(decoder.writable);
         reader = decoder.readable.getReader();
@@ -712,6 +716,7 @@ async function chooseSerialPort() {
         writer = encoder.writable.getWriter();
 
         isConnected = true;
+        console.log('[시리얼] 연결 완료');
 
         // UI 상태 갱신 (하드락 시 유지보수 해제 금지)
         const isErrorVisible = document.getElementById('error-screen')?.style.display === 'flex';
@@ -1660,6 +1665,9 @@ async function startProcess() {
                 showScreen('main-screen');
                 return;
             }
+            // 3초 후 이동
+            await new Promise((r) => setTimeout(r, 3000));
+
             depositCount += 1;
             showScreen('end-screen');
         } catch (err) {
@@ -1842,6 +1850,10 @@ function waitForAnyArduinoResponse(targetMessages, { timeoutMs = 30000 } = {}) {
                         }
                         if (value) {
                             receivedData += value;
+
+                            // [ADD] 수신 데이터 디버그 로그
+                            console.log('[waitForAnyArduinoResponse] 수신:', value.substring(0, 100));
+
                             if (receivedData.includes('ERROR:')) {
                                 clearTimeout(timer);
                                 const line =
@@ -1973,6 +1985,9 @@ async function runCloseClassifyCollectSequence() {
     renderProcess('collect', '자원을 수집하는 중입니다...', 3, { spin: true });
     await writeCmd('4');
     await waitForArduinoResponse('24V Motor stopped', { timeoutMs: 20000 });
+    // 3초 대기 후 end-screen
+    await new Promise((r) => setTimeout(r, 3000));
+    depositCount += 1;
 }
 
 // ========== Fa-duino 연결 ==========
